@@ -82,7 +82,7 @@ export default function TradingCalculator() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-800 rounded-lg shadow-lg">
-      <h1 className="text-2xl font-bold mb-6 text-white">Trading Strategy Calculator</h1>
+      <h1 className="text-2xl font-bold mb-6 text-white">Leverage Calculator</h1>
       
       <div className="space-y-4">
         <div>
