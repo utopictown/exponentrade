@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CalculationResults {
   positionSize: number;
@@ -24,6 +24,55 @@ export default function TradingCalculator() {
   const [riskTolerance, setRiskTolerance] = useState<string>('');
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load saved values from localStorage
+  useEffect(() => {
+    const savedPositionType = localStorage.getItem('positionType');
+    const savedEntryPrice = localStorage.getItem('entryPrice');
+    const savedStopLoss = localStorage.getItem('stopLoss');
+    const savedInitialFunds = localStorage.getItem('initialFunds');
+    const savedRiskTolerance = localStorage.getItem('riskTolerance');
+
+    if (savedPositionType) setPositionType(savedPositionType as 'long' | 'short');
+    if (savedEntryPrice) setEntryPrice(savedEntryPrice);
+    if (savedStopLoss) setStopLoss(savedStopLoss);
+    if (savedInitialFunds) setInitialFunds(savedInitialFunds);
+    if (savedRiskTolerance) setRiskTolerance(savedRiskTolerance);
+
+    setIsLoaded(true);
+  }, []);
+
+  // Save values to localStorage when they change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('positionType', positionType);
+    }
+  }, [positionType, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('entryPrice', entryPrice);
+    }
+  }, [entryPrice, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('stopLoss', stopLoss);
+    }
+  }, [stopLoss, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('initialFunds', initialFunds);
+    }
+  }, [initialFunds, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('riskTolerance', riskTolerance);
+    }
+  }, [riskTolerance, isLoaded]);
 
   const validateInputs = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -87,27 +136,29 @@ export default function TradingCalculator() {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">Position Type</label>
-          <div className="flex space-x-4">
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                value="long"
-                checked={positionType === 'long'}
-                onChange={(e) => setPositionType(e.target.value as 'long')}
-                className="form-radio h-4 w-4 text-blue-500"
-              />
-              <span className="ml-2 text-gray-300">Long</span>
-            </label>
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                value="short"
-                checked={positionType === 'short'}
-                onChange={(e) => setPositionType(e.target.value as 'short')}
-                className="form-radio h-4 w-4 text-blue-500"
-              />
-              <span className="ml-2 text-gray-300">Short</span>
-            </label>
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => setPositionType('long')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                positionType === 'long'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Long
+            </button>
+            <button
+              type="button"
+              onClick={() => setPositionType('short')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                positionType === 'short'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Short
+            </button>
           </div>
         </div>
 
@@ -117,7 +168,7 @@ export default function TradingCalculator() {
             type="number"
             value={entryPrice}
             onChange={(e) => setEntryPrice(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
             step="any"
           />
           {errors.entryPrice && <p className="text-red-400 text-sm mt-1">{errors.entryPrice}</p>}
@@ -129,7 +180,7 @@ export default function TradingCalculator() {
             type="number"
             value={stopLoss}
             onChange={(e) => setStopLoss(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
             step="any"
           />
           {errors.stopLoss && <p className="text-red-400 text-sm mt-1">{errors.stopLoss}</p>}
@@ -141,7 +192,7 @@ export default function TradingCalculator() {
             type="number"
             value={initialFunds}
             onChange={(e) => setInitialFunds(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
             step="any"
           />
           {errors.initialFunds && <p className="text-red-400 text-sm mt-1">{errors.initialFunds}</p>}
@@ -153,7 +204,7 @@ export default function TradingCalculator() {
             type="number"
             value={riskTolerance}
             onChange={(e) => setRiskTolerance(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
             step="0.01"
             min="0"
             max="1"
@@ -163,7 +214,7 @@ export default function TradingCalculator() {
 
         <button
           onClick={calculateResults}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+          className="w-full bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-gray-800"
         >
           Calculate
         </button>
