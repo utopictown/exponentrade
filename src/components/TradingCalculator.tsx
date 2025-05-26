@@ -134,7 +134,7 @@ export default function TradingCalculator() {
       <h1 className="text-2xl font-bold mb-6 text-white">Leverage Calculator</h1>
       
       <div className="space-y-4">
-        <div>
+        <div className="flex flex-col justify-center items-center">
           <label className="block text-sm font-medium text-gray-300 mb-1">Position Type</label>
           <div className="flex space-x-2">
             <button
