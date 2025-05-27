@@ -14,6 +14,7 @@ interface ValidationErrors {
   stopLoss?: string;
   initialFunds?: string;
   riskTolerance?: string;
+  riskAmount?: string;
 }
 
 export default function TradingCalculator() {
@@ -22,6 +23,8 @@ export default function TradingCalculator() {
   const [stopLoss, setStopLoss] = useState<string>('');
   const [initialFunds, setInitialFunds] = useState<string>('');
   const [riskTolerance, setRiskTolerance] = useState<string>('');
+  const [riskAmount, setRiskAmount] = useState<string>('');
+  const [riskMode, setRiskMode] = useState<'percentage' | 'fixed'>('percentage');
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isLoaded, setIsLoaded] = useState(false);
@@ -33,12 +36,16 @@ export default function TradingCalculator() {
     const savedStopLoss = localStorage.getItem('stopLoss');
     const savedInitialFunds = localStorage.getItem('initialFunds');
     const savedRiskTolerance = localStorage.getItem('riskTolerance');
+    const savedRiskAmount = localStorage.getItem('riskAmount');
+    const savedRiskMode = localStorage.getItem('riskMode');
 
     if (savedPositionType) setPositionType(savedPositionType as 'long' | 'short');
     if (savedEntryPrice) setEntryPrice(savedEntryPrice);
     if (savedStopLoss) setStopLoss(savedStopLoss);
     if (savedInitialFunds) setInitialFunds(savedInitialFunds);
     if (savedRiskTolerance) setRiskTolerance(savedRiskTolerance);
+    if (savedRiskAmount) setRiskAmount(savedRiskAmount);
+    if (savedRiskMode) setRiskMode(savedRiskMode as 'percentage' | 'fixed');
 
     setIsLoaded(true);
   }, []);
@@ -74,12 +81,25 @@ export default function TradingCalculator() {
     }
   }, [riskTolerance, isLoaded]);
 
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('riskAmount', riskAmount);
+    }
+  }, [riskAmount, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('riskMode', riskMode);
+    }
+  }, [riskMode, isLoaded]);
+
   const validateInputs = (): boolean => {
     const newErrors: ValidationErrors = {};
     const entryPriceNum = parseFloat(entryPrice);
     const stopLossNum = parseFloat(stopLoss);
     const initialFundsNum = parseFloat(initialFunds);
     const riskToleranceNum = parseFloat(riskTolerance);
+    const riskAmountNum = parseFloat(riskAmount);
 
     if (isNaN(entryPriceNum) || entryPriceNum <= 0) {
       newErrors.entryPrice = 'Entry price must be a positive number';
@@ -97,8 +117,16 @@ export default function TradingCalculator() {
       newErrors.initialFunds = 'Initial funds must be a positive number';
     }
 
-    if (isNaN(riskToleranceNum) || riskToleranceNum <= 0 || riskToleranceNum >= 1) {
-      newErrors.riskTolerance = 'Risk tolerance must be between 0 and 1';
+    if (riskMode === 'percentage') {
+      if (isNaN(riskToleranceNum) || riskToleranceNum <= 0 || riskToleranceNum > 100) {
+        newErrors.riskTolerance = 'Risk tolerance must be between 0 and 100';
+      }
+    } else {
+      if (isNaN(riskAmountNum) || riskAmountNum <= 0) {
+        newErrors.riskAmount = 'Risk amount must be a positive number';
+      } else if (riskAmountNum > initialFundsNum) {
+        newErrors.riskAmount = 'Risk amount cannot exceed initial funds';
+      }
     }
 
     setErrors(newErrors);
@@ -112,12 +140,16 @@ export default function TradingCalculator() {
     const stopLossNum = parseFloat(stopLoss);
     const initialFundsNum = parseFloat(initialFunds);
     const riskToleranceNum = parseFloat(riskTolerance);
+    const riskAmountNum = parseFloat(riskAmount);
 
-    const riskAmount = initialFundsNum * riskToleranceNum;
+    const calculatedRiskAmount = riskMode === 'percentage' 
+      ? initialFundsNum * (riskToleranceNum / 100)
+      : riskAmountNum;
+
     const lossPerUnit = Math.abs(
       positionType === 'long' ? entryPriceNum - stopLossNum : stopLossNum - entryPriceNum
     );
-    const positionSize = riskAmount / lossPerUnit;
+    const positionSize = calculatedRiskAmount / lossPerUnit;
     const positionValue = positionSize * entryPriceNum;
     const leverage = positionValue / initialFundsNum;
 
@@ -125,7 +157,7 @@ export default function TradingCalculator() {
       positionSize: Number(positionSize.toFixed(2)),
       positionValue: Number(positionValue.toFixed(2)),
       leverage: Number(leverage.toFixed(2)),
-      riskAmount: Number(riskAmount.toFixed(2)),
+      riskAmount: Number(calculatedRiskAmount.toFixed(2)),
     });
   };
 
@@ -199,17 +231,60 @@ export default function TradingCalculator() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Risk Tolerance (0-1)</label>
-          <input
-            type="number"
-            value={riskTolerance}
-            onChange={(e) => setRiskTolerance(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
-            step="0.01"
-            min="0"
-            max="1"
-          />
-          {errors.riskTolerance && <p className="text-red-400 text-sm mt-1">{errors.riskTolerance}</p>}
+          <label className="block text-sm font-medium text-gray-300 mb-1">Risk Calculation Mode</label>
+          <div className="flex space-x-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setRiskMode('percentage')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                riskMode === 'percentage'
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Percentage
+            </button>
+            <button
+              type="button"
+              onClick={() => setRiskMode('fixed')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                riskMode === 'fixed'
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Fixed Amount
+            </button>
+          </div>
+
+          {riskMode === 'percentage' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Risk Tolerance (%)</label>
+              <input
+                type="number"
+                value={riskTolerance}
+                onChange={(e) => setRiskTolerance(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
+                step="0.01"
+                min="0"
+                max="100"
+              />
+              {errors.riskTolerance && <p className="text-red-400 text-sm mt-1">{errors.riskTolerance}</p>}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Risk Amount</label>
+              <input
+                type="number"
+                value={riskAmount}
+                onChange={(e) => setRiskAmount(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-white placeholder-gray-400"
+                step="any"
+                min="0"
+              />
+              {errors.riskAmount && <p className="text-red-400 text-sm mt-1">{errors.riskAmount}</p>}
+            </div>
+          )}
         </div>
 
         <button
@@ -221,7 +296,10 @@ export default function TradingCalculator() {
 
         {results && (
           <div className="mt-6 p-4 bg-gray-700 rounded-md">
-            <h2 className="text-lg font-semibold mb-4 text-white">Results</h2>
+            <div className="text-center mb-6">
+              <p className="text-gray-300 text-sm mb-1">Required Leverage</p>
+              <p className="text-4xl font-bold text-white">{results.leverage}x</p>
+            </div>
             <div className="space-y-2">
               <p className="text-gray-300">
                 Position Size: <span className="font-medium text-white">{results.positionSize}</span> units
@@ -229,11 +307,9 @@ export default function TradingCalculator() {
               <p className="text-gray-300">
                 Position Value: <span className="font-medium text-white">${results.positionValue}</span>
               </p>
-              <p className="text-gray-300">
-                Required Leverage: <span className="font-medium text-white">{results.leverage}x</span>
-              </p>
               <p className="text-gray-300 mt-4">
-                Note: If the price hits the stop loss, your loss will be limited to <span className="font-medium text-white">${results.riskAmount}</span>, which is <span className="font-medium text-white">{(parseFloat(riskTolerance) * 100).toFixed(2)}%</span> of your initial funds.
+                <span className="font-semibold">If the price hits the stop loss, your loss will be limited to <span className="font-medium text-white">${results.riskAmount}</span>
+                <span>, which is <span className="font-medium text-white">{((results.riskAmount / parseFloat(initialFunds)) * 100).toFixed(2)}%</span> of your initial funds</span>.</span>
               </p>
             </div>
           </div>
